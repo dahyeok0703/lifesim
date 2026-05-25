@@ -1,15 +1,15 @@
-// Anthropic Claude API 래퍼: 동적 이벤트 생성 및 선택 결과 해석
+// OpenAI API 래퍼: 동적 이벤트 생성 및 선택 결과 해석
 // 클라이언트는 세션별로 주입받는다 (UI에서 입력한 API 키 사용).
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { ageOf, money, statLabel, STAT_KEYS } from "./game.js";
 
-export const DEFAULT_MODEL = "claude-sonnet-4-6";
+export const DEFAULT_MODEL = process.env.LIFESIM_MODEL || "gpt-4o";
 
 // UI 입력 키 우선, 없으면 환경변수 사용. 키가 없으면 null.
 export function makeClient(apiKey) {
-  const key = (apiKey && apiKey.trim()) || process.env.ANTHROPIC_API_KEY;
+  const key = (apiKey && apiKey.trim()) || process.env.OPENAI_API_KEY;
   if (!key) return null;
-  return new Anthropic({ apiKey: key });
+  return new OpenAI({ apiKey: key });
 }
 
 function stateSummary(state) {
@@ -45,32 +45,27 @@ const SYSTEM = `당신은 "LifeSim 2026"이라는 인생 시뮬레이션 게임�
 - 인물의 나이, 직업, 자산, 능력치, 인간관계에 개연성 있게 맞춰 사건을 만듭니다.
 - 너무 황당하거나 비현실적이지 않게, 그러나 지루하지 않게 흥미로운 사건을 제시합니다.
 - 한국어로, 몰입감 있고 간결한 문체로 서술합니다.
-- 반드시 지정된 JSON 형식으로만 응답하고, 그 외 텍스트나 마크다운 코드블록을 절대 포함하지 마세요.`;
-
-function extractJSON(text) {
-  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("JSON 파싱 실패: " + text.slice(0, 200));
-  return JSON.parse(cleaned.slice(start, end + 1));
-}
+- 반드시 지정된 JSON 형식의 객체로만 응답합니다.`;
 
 async function callJSON(ctx, userPrompt, maxTokens = 1200) {
-  const res = await ctx.client.messages.create({
+  const res = await ctx.client.chat.completions.create({
     model: ctx.model || DEFAULT_MODEL,
     max_tokens: maxTokens,
-    system: SYSTEM,
-    messages: [{ role: "user", content: userPrompt }],
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: SYSTEM },
+      { role: "user", content: userPrompt },
+    ],
   });
-  const text = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-  return extractJSON(text);
+  const text = res.choices?.[0]?.message?.content || "";
+  return JSON.parse(text);
 }
 
 // API 키 유효성 가벼운 검증 (잘못된 키면 throw)
 export async function verifyClient(ctx) {
-  await ctx.client.messages.create({
+  await ctx.client.chat.completions.create({
     model: ctx.model || DEFAULT_MODEL,
-    max_tokens: 4,
+    max_tokens: 5,
     messages: [{ role: "user", content: "ping" }],
   });
   return true;
