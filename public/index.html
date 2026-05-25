@@ -12,7 +12,7 @@
     <section id="screen-start" class="screen active">
       <div class="hero">
         <h1>LifeSim <span class="year">2026</span></h1>
-        <p class="tagline">당신은 2026년 대한민국을 살아가는 한 사람.<br/>매 순간의 선택이 인생을 만든다.</p>
+        <p class="tagline">2026년 대한민국. 당신의 인생을 채팅으로 살아가세요.<br/>하고 싶은 무엇이든 입력하면 이야기가 펼쳐집니다.</p>
       </div>
       <div class="card setup">
         <label>이름 <input id="in-name" placeholder="비워두면 랜덤" maxlength="12" /></label>
@@ -23,13 +23,13 @@
             <option value="여성">여성</option>
           </select>
         </label>
-        <label>시작 나이 <input id="in-age" type="number" min="14" max="70" value="18" /></label>
-        <label>배경 한 줄 <input id="in-bg" placeholder="예: 지방 출신 대학 새내기 (선택)" maxlength="60" /></label>
+        <label>시작 나이 <input id="in-age" type="number" min="14" max="70" value="20" /></label>
+        <label>배경 한 줄 <input id="in-bg" placeholder="예: 지방 출신 대학 휴학생 (선택)" maxlength="60" /></label>
 
         <details class="ai-box" id="ai-box">
           <summary>🤖 AI 모드 설정 (OpenAI API 키)</summary>
           <label>API 키
-            <input id="in-key" type="password" placeholder="sk-... (입력 시 AI가 사건을 생성)" autocomplete="off" />
+            <input id="in-key" type="password" placeholder="sk-... (입력 시 AI가 이야기를 생성)" autocomplete="off" />
           </label>
           <label>모델
             <select id="in-model">
@@ -43,7 +43,6 @@
         </details>
 
         <button id="btn-start" class="primary">인생 시작하기</button>
-        <p id="ai-status" class="ai-status"></p>
       </div>
     </section>
 
@@ -56,36 +55,29 @@
         </div>
         <div class="topright">
           <span id="g-ai-badge" class="ai-badge"></span>
-          <div class="money" id="g-money">—</div>
+          <div class="net"><span class="net-label">순자산</span><span id="g-net" class="money">—</span></div>
         </div>
       </header>
 
       <div class="stats" id="g-stats"></div>
 
-      <main class="event-area">
-        <div class="card event" id="event-card">
-          <h2 id="ev-title">—</h2>
-          <p id="ev-narrative" class="narrative">—</p>
-          <div id="outcome-box" class="outcome hidden"></div>
-          <div id="choices" class="choices"></div>
-          <div class="custom">
-            <input id="custom-input" placeholder="또는 직접 행동을 입력… (예: 카페 창업을 준비한다)" maxlength="100" />
-            <button id="custom-btn">실행</button>
+      <div class="main-grid">
+        <!-- 채팅 -->
+        <section class="chat-panel">
+          <div id="chat-log" class="chat-log"></div>
+          <div id="suggestions" class="suggestions"></div>
+          <div class="chat-input">
+            <input id="chat-text" placeholder="무엇을 할까요? (예: 카페 창업 자금을 알아본다)" maxlength="200" />
+            <button id="chat-send">▶</button>
           </div>
-        </div>
-        <div id="loading" class="loading hidden"><div class="spinner"></div><span>전개 중…</span></div>
-      </main>
+        </section>
 
-      <aside class="sidebar">
-        <div class="card">
-          <h3>인간관계</h3>
-          <ul id="g-rels" class="rels"></ul>
-        </div>
-        <div class="card">
-          <h3>인생 일지</h3>
-          <ul id="g-log" class="log"></ul>
-        </div>
-      </aside>
+        <!-- 탭 패널 -->
+        <aside class="tabs-panel">
+          <nav class="tabs" id="tabs"></nav>
+          <div class="tab-body" id="tab-body"></div>
+        </aside>
+      </div>
     </section>
 
     <!-- 사망 화면 -->

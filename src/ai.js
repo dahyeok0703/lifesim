@@ -1,11 +1,10 @@
-// OpenAI API 래퍼: 동적 이벤트 생성 및 선택 결과 해석
+// OpenAI API 래퍼: 채팅 주도형 게임 마스터
 // 클라이언트는 세션별로 주입받는다 (UI에서 입력한 API 키 사용).
 import OpenAI from "openai";
-import { ageOf, money, statLabel, STAT_KEYS } from "./game.js";
+import { ageOf, money, netWorth, statLabel, STAT_KEYS } from "./game.js";
 
 export const DEFAULT_MODEL = process.env.LIFESIM_MODEL || "gpt-4o";
 
-// UI 입력 키 우선, 없으면 환경변수 사용. 키가 없으면 null.
 export function makeClient(apiKey) {
   const key = (apiKey && apiKey.trim()) || process.env.OPENAI_API_KEY;
   if (!key) return null;
@@ -13,55 +12,67 @@ export function makeClient(apiKey) {
 }
 
 function stateSummary(state) {
-  const stats = STAT_KEYS.map((k) => `${statLabel(k)} ${state.stats[k]}`).join(", ");
-  const rels = state.relationships.length
-    ? state.relationships
-        .map((r) => `${r.name}(${r.type}, 친밀도 ${r.closeness})`)
-        .join(", ")
+  const s = state;
+  const stats = STAT_KEYS.map((k) => `${statLabel(k)} ${s.stats[k]}`).join(", ");
+  const f = s.finance;
+  const rels = s.relationships.length
+    ? s.relationships.map((r) => `${r.name}(${r.type},친밀도${r.closeness})`).join(", ")
     : "없음";
-  const recent = state.log
-    .slice(-6)
-    .map((l) => `- ${l.date}(${l.age}세): ${l.text}`)
-    .join("\n");
-
-  return `[인물 정보]
-이름: ${state.name} (${state.gender})
-나이: ${ageOf(state)}세
-현재 시점: ${state.date.year}년 ${state.date.month}월
-학력: ${state.education}
-직업: ${state.job ? `${state.job.title} (연봉 ${money(state.job.salary)})` : "무직"}
-자산: ${money(state.money)}
-능력치(0~100): ${stats}
-성격/특성: ${state.traits.length ? state.traits.join(", ") : "없음"}
-인간관계: ${rels}${state.background ? `\n배경: ${state.background}` : ""}
-${recent ? `\n[최근 일지]\n${recent}` : ""}`;
+  return `[현재 상태] ${s.date.year}년 ${s.date.month}월
+- 인물: ${s.name}, ${s.gender}, ${ageOf(s)}세 ${s.background ? `(${s.background})` : ""}
+- 능력치(0~100): ${stats}
+- 자산: 현금 ${money(f.cash)}, 예금 ${money(f.savings)}, 투자 ${money(f.investments)}, 빚 ${money(f.debt)}, 월수입 ${money(f.monthlyIncome)}, 월지출 ${money(f.monthlyExpense)} / 순자산 ${money(netWorth(s))}
+- 학업: ${s.education.level}, ${s.education.status}${s.education.school ? `, ${s.education.school}` : ""}${s.education.major ? ` ${s.education.major}` : ""}${s.education.certificates.length ? `, 자격증[${s.education.certificates.join(",")}]` : ""}
+- 일: ${s.career.job ? `${s.career.company} ${s.career.position} ${s.career.job}, 연봉 ${money(s.career.salary)}, 만족도 ${s.career.satisfaction}` : "무직"}
+- 사랑: ${s.love.status}${s.love.partner ? `, 상대 ${s.love.partner.name}(호감 ${s.love.partner.affinity})` : ""}${s.love.married ? ", 기혼" : ""}
+- SNS: ${s.sns.platform} ${s.sns.handle}, 팔로워 ${s.sns.followers}, 게시물 ${s.sns.posts}, 영향력 ${s.sns.influence}
+- 인간관계: ${rels}
+- 소지품: ${s.inventory.map((i) => i.name).join(", ") || "없음"}
+- 취미: ${s.hobbies.join(", ") || "없음"} / 특성: ${s.traits.join(", ") || "없음"}`;
 }
 
-const SYSTEM = `당신은 "LifeSim 2026"이라는 인생 시뮬레이션 게임의 게임 마스터입니다.
-플레이어는 2026년 대한민국의 현실세계를 살아가는 한 사람입니다.
+const SYSTEM = `당신은 "LifeSim 2026" 인생 시뮬레이션 게임의 게임 마스터(GM)입니다.
+플레이어는 2026년 대한민국을 살아가는 한 사람이며, 채팅으로 자신이 하고 싶은 행동/말을 자유롭게 입력합니다.
+당신은 그 행동의 결과를 개연성 있게 서술하고, 인생의 여러 영역(자산/학업/일/사랑/SNS/인간관계/건강/소지품 등)의 수치를 변화시킵니다.
 
-규칙:
-- 2026년 현실의 사회/경제/기술/문화 맥락(고물가, AI 보편화, 취업난, 부동산, SNS, 기후, 정치 분위기 등)을 자연스럽게 반영합니다.
-- 인물의 나이, 직업, 자산, 능력치, 인간관계에 개연성 있게 맞춰 사건을 만듭니다.
-- 너무 황당하거나 비현실적이지 않게, 그러나 지루하지 않게 흥미로운 사건을 제시합니다.
-- 한국어로, 몰입감 있고 간결한 문체로 서술합니다.
-- 반드시 지정된 JSON 형식의 객체로만 응답합니다.`;
+원칙:
+- 2026년 현실(고물가, AI 보편화, 취업난, 부동산, SNS, 주식/코인, 기후, 정치 분위기 등)을 자연스럽게 반영.
+- 인물의 현재 상태(나이/직업/자산/능력치/관계)에 맞춰 개연성 있게. 항상 성공시키지 말고 실패·부작용·뜻밖의 전개도 섞을 것.
+- 답변(reply)은 한국어로, 1~4문장의 몰입감 있고 구체적인 서술. 게임 마스터로서 상황을 생생히 그려준다.
+- 수치 변화는 현실적으로(능력치는 보통 -15~+15). 돈은 원(KRW) 정수.
+- 큰 사건이면 시간(age_months)을 여러 달로. 보통은 1.
+- 반드시 아래 JSON 객체 형식으로만 응답.
 
-async function callJSON(ctx, userPrompt, maxTokens = 1200) {
+[effects 스키마 — 변화 있는 항목만 포함]
+- stats: {health, happiness, mental, intelligence, looks, fitness} (각 항목은 더해질 델타값)
+- finance: {cash, savings, investments, debt, monthlyIncome, monthlyExpense} (각 델타값, 원)
+- career: {job, company, position, salary(절대,연봉), satisfaction(절대0~100), quit(true면 퇴사)}
+- education: {level, school, major, gpa, status, add_certificate}
+- love: {status("솔로"/"썸"/"연애중"/"약혼"/"기혼"), partner_name, partner_affinity, partner_affinity_delta, married, breakup}
+- sns: {platform, followers_delta, posts_delta, influence(절대), new_post(올린 글 내용)}
+- add_relationships: [{name, type, closeness}], relationship_changes: [{name, closeness(델타)}], remove_relationships: [name]
+- add_inventory: [{name, note}], remove_inventory: [name]
+- add_hobbies: [name], add_traits: [name]`;
+
+const JSON_SHAPE = `{
+  "reply": "GM의 서술 (한국어 1~4문장)",
+  "effects": { ... 위 스키마 중 변화 있는 항목만 ... },
+  "age_months": 1,
+  "death": false,
+  "death_reason": "",
+  "suggestions": ["추천 행동1", "추천 행동2", "추천 행동3"]
+}`;
+
+async function callJSON(ctx, messages, maxTokens = 1200) {
   const res = await ctx.client.chat.completions.create({
     model: ctx.model || DEFAULT_MODEL,
     max_tokens: maxTokens,
     response_format: { type: "json_object" },
-    messages: [
-      { role: "system", content: SYSTEM },
-      { role: "user", content: userPrompt },
-    ],
+    messages,
   });
-  const text = res.choices?.[0]?.message?.content || "";
-  return JSON.parse(text);
+  return JSON.parse(res.choices?.[0]?.message?.content || "{}");
 }
 
-// API 키 유효성 가벼운 검증 (잘못된 키면 throw)
 export async function verifyClient(ctx) {
   await ctx.client.chat.completions.create({
     model: ctx.model || DEFAULT_MODEL,
@@ -71,65 +82,36 @@ export async function verifyClient(ctx) {
   return true;
 }
 
-export async function generateEvent(ctx, state) {
-  const prompt = `${stateSummary(state)}
+export async function chatTurn(ctx, state, userMessage) {
+  const history = state.chat.slice(-8).map((c) => ({
+    role: c.role === "user" ? "user" : "assistant",
+    content: c.text,
+  }));
 
-위 인물에게 이번 달(${state.date.year}년 ${state.date.month}월)에 일어나는 하나의 사건/상황을 만들어 주세요.
-3~4개의 선택지를 제시하되, 각 선택지의 결과(능력치 변화 등)는 절대 미리 알려주지 마세요.
+  const messages = [
+    { role: "system", content: SYSTEM },
+    { role: "system", content: stateSummary(state) },
+    ...history,
+    {
+      role: "user",
+      content: `플레이어의 행동/말: "${userMessage}"
 
-JSON 형식:
-{
-  "title": "사건의 짧은 제목",
-  "narrative": "2~4문장의 상황 서술",
-  "choices": [
-    {"label": "선택지 내용 (한 문장)"},
-    {"label": "..."}
-  ]
-}`;
-  return callJSON(ctx, prompt, 900);
-}
-
-export async function resolveChoice(ctx, state, action, isCustom = false) {
-  const actionDesc = isCustom
-    ? `플레이어가 직접 입력한 자유 행동: "${action}"`
-    : `플레이어가 선택한 행동: "${action}"`;
-
-  const prompt = `${stateSummary(state)}
-
-직전 상황: ${state.pending ? state.pending.narrative : "(일상)"}
-
-${actionDesc}
-
-이 행동의 결과를 개연성 있게 판정해 주세요. 좋은 결과만이 아니라 때로는 실패, 부작용, 예상치 못한 전개도 있을 수 있습니다.
-능력치 변화는 보통 -15 ~ +15 범위로 현실적으로. 돈은 원(KRW) 단위 정수로.
-시간은 보통 1개월(age_months: 1) 흐르지만, 큰 사건이면 더 길 수도 있습니다.
-
-JSON 형식 (변화 없는 항목은 생략 가능):
-{
-  "outcome": "2~4문장의 결과 서술 (구체적이고 생생하게)",
-  "effects": {
-    "stats": {"health": 0, "happiness": 0, "intelligence": 0, "looks": 0, "fitness": 0},
-    "money": 0,
-    "job": {"title": "직업명", "salary": 연봉정수} 또는 null (변경 시에만),
-    "education": "학력 (변경 시에만)",
-    "add_relationships": [{"name": "이름", "type": "관계", "closeness": 50}],
-    "relationship_changes": [{"name": "기존이름", "closeness": -10}],
-    "remove_relationships": ["이름"],
-    "add_traits": ["새 특성"]
-  },
-  "age_months": 1,
-  "death": false,
-  "death_reason": ""
-}`;
-  return callJSON(ctx, prompt, 1200);
+이 행동의 결과를 판정해 다음 JSON 형식으로만 응답:
+${JSON_SHAPE}`,
+    },
+  ];
+  return callJSON(ctx, messages, 1200);
 }
 
 export async function generateIntro(ctx, state) {
-  const prompt = `${stateSummary(state)}
-
-이 인물이 2026년을 살아가기 시작하는 도입부를 2~3문장으로 써주세요. 인물의 현재 처지와 분위기를 그려주세요.
-
-JSON 형식: {"intro": "도입부 텍스트"}`;
-  const r = await callJSON(ctx, prompt, 400);
-  return r.intro;
+  const messages = [
+    { role: "system", content: SYSTEM },
+    { role: "system", content: stateSummary(state) },
+    {
+      role: "user",
+      content: `이 인물이 2026년을 살아가기 시작하는 도입부를 GM 시점에서 2~3문장으로 써주고, 추천 행동 3개를 제시하세요.
+JSON: {"intro": "도입부", "suggestions": ["행동1","행동2","행동3"]}`,
+    },
+  ];
+  return callJSON(ctx, messages, 400);
 }
