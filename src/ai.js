@@ -1,17 +1,15 @@
 // Anthropic Claude API 래퍼: 동적 이벤트 생성 및 선택 결과 해석
+// 클라이언트는 세션별로 주입받는다 (UI에서 입력한 API 키 사용).
 import Anthropic from "@anthropic-ai/sdk";
 import { ageOf, money, statLabel, STAT_KEYS } from "./game.js";
 
-const MODEL = process.env.LIFESIM_MODEL || "claude-sonnet-4-6";
-const hasKey = !!process.env.ANTHROPIC_API_KEY;
+export const DEFAULT_MODEL = "claude-sonnet-4-6";
 
-let client = null;
-if (hasKey) {
-  client = new Anthropic();
-}
-
-export function aiEnabled() {
-  return !!client;
+// UI 입력 키 우선, 없으면 환경변수 사용. 키가 없으면 null.
+export function makeClient(apiKey) {
+  const key = (apiKey && apiKey.trim()) || process.env.ANTHROPIC_API_KEY;
+  if (!key) return null;
+  return new Anthropic({ apiKey: key });
 }
 
 function stateSummary(state) {
@@ -35,7 +33,7 @@ function stateSummary(state) {
 자산: ${money(state.money)}
 능력치(0~100): ${stats}
 성격/특성: ${state.traits.length ? state.traits.join(", ") : "없음"}
-인간관계: ${rels}
+인간관계: ${rels}${state.background ? `\n배경: ${state.background}` : ""}
 ${recent ? `\n[최근 일지]\n${recent}` : ""}`;
 }
 
@@ -50,7 +48,6 @@ const SYSTEM = `당신은 "LifeSim 2026"이라는 인생 시뮬레이션 게임�
 - 반드시 지정된 JSON 형식으로만 응답하고, 그 외 텍스트나 마크다운 코드블록을 절대 포함하지 마세요.`;
 
 function extractJSON(text) {
-  // 코드블록 제거 후 첫 { ~ 마지막 } 추출
   const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
   const start = cleaned.indexOf("{");
   const end = cleaned.lastIndexOf("}");
@@ -58,9 +55,9 @@ function extractJSON(text) {
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
-async function callJSON(userPrompt, maxTokens = 1200) {
-  const res = await client.messages.create({
-    model: MODEL,
+async function callJSON(ctx, userPrompt, maxTokens = 1200) {
+  const res = await ctx.client.messages.create({
+    model: ctx.model || DEFAULT_MODEL,
     max_tokens: maxTokens,
     system: SYSTEM,
     messages: [{ role: "user", content: userPrompt }],
@@ -69,7 +66,17 @@ async function callJSON(userPrompt, maxTokens = 1200) {
   return extractJSON(text);
 }
 
-export async function generateEvent(state) {
+// API 키 유효성 가벼운 검증 (잘못된 키면 throw)
+export async function verifyClient(ctx) {
+  await ctx.client.messages.create({
+    model: ctx.model || DEFAULT_MODEL,
+    max_tokens: 4,
+    messages: [{ role: "user", content: "ping" }],
+  });
+  return true;
+}
+
+export async function generateEvent(ctx, state) {
   const prompt = `${stateSummary(state)}
 
 위 인물에게 이번 달(${state.date.year}년 ${state.date.month}월)에 일어나는 하나의 사건/상황을 만들어 주세요.
@@ -84,10 +91,10 @@ JSON 형식:
     {"label": "..."}
   ]
 }`;
-  return callJSON(prompt, 900);
+  return callJSON(ctx, prompt, 900);
 }
 
-export async function resolveChoice(state, action, isCustom = false) {
+export async function resolveChoice(ctx, state, action, isCustom = false) {
   const actionDesc = isCustom
     ? `플레이어가 직접 입력한 자유 행동: "${action}"`
     : `플레이어가 선택한 행동: "${action}"`;
@@ -119,15 +126,15 @@ JSON 형식 (변화 없는 항목은 생략 가능):
   "death": false,
   "death_reason": ""
 }`;
-  return callJSON(prompt, 1200);
+  return callJSON(ctx, prompt, 1200);
 }
 
-export async function generateIntro(state) {
+export async function generateIntro(ctx, state) {
   const prompt = `${stateSummary(state)}
 
 이 인물이 2026년을 살아가기 시작하는 도입부를 2~3문장으로 써주세요. 인물의 현재 처지와 분위기를 그려주세요.
 
 JSON 형식: {"intro": "도입부 텍스트"}`;
-  const r = await callJSON(prompt, 400);
+  const r = await callJSON(ctx, prompt, 400);
   return r.intro;
 }

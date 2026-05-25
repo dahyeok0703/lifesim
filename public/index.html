@@ -25,6 +25,23 @@
         </label>
         <label>시작 나이 <input id="in-age" type="number" min="14" max="70" value="18" /></label>
         <label>배경 한 줄 <input id="in-bg" placeholder="예: 지방 출신 대학 새내기 (선택)" maxlength="60" /></label>
+
+        <details class="ai-box" id="ai-box">
+          <summary>🤖 AI 모드 설정 (Anthropic API 키)</summary>
+          <label>API 키
+            <input id="in-key" type="password" placeholder="sk-ant-... (입력 시 AI가 사건을 생성)" autocomplete="off" />
+          </label>
+          <label>모델
+            <select id="in-model">
+              <option value="claude-sonnet-4-6">claude-sonnet-4-6 (균형·추천)</option>
+              <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (빠름·저렴)</option>
+              <option value="claude-opus-4-7">claude-opus-4-7 (최고 품질)</option>
+            </select>
+          </label>
+          <label class="check"><input id="in-remember" type="checkbox" /> 이 브라우저에 키 기억하기</label>
+          <p class="hint">키는 로컬 서버 메모리에서만 사용됩니다. '기억하기'를 켜면 이 브라우저(localStorage)에만 저장됩니다. 비워두면 내장 폴백 엔진으로 플레이합니다.</p>
+        </details>
+
         <button id="btn-start" class="primary">인생 시작하기</button>
         <p id="ai-status" class="ai-status"></p>
       </div>
@@ -37,7 +54,10 @@
           <strong id="g-name">—</strong>
           <span id="g-meta" class="meta">—</span>
         </div>
-        <div class="money" id="g-money">—</div>
+        <div class="topright">
+          <span id="g-ai-badge" class="ai-badge"></span>
+          <div class="money" id="g-money">—</div>
+        </div>
       </header>
 
       <div class="stats" id="g-stats"></div>

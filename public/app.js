@@ -110,18 +110,34 @@ function endGame(state) {
 
 async function start() {
   const btn = $("btn-start");
-  btn.disabled = true; btn.textContent = "생성 중…";
+  const apiKey = $("in-key").value.trim();
+  const model = $("in-model").value;
+  btn.disabled = true; btn.textContent = apiKey ? "AI 준비 중…" : "생성 중…";
+
+  // 키 기억하기
+  if ($("in-remember").checked && apiKey) localStorage.setItem("lifesim_key", apiKey);
+  else localStorage.removeItem("lifesim_key");
+  localStorage.setItem("lifesim_model", model);
+
   try {
     const data = await api("/api/new", {
       name: $("in-name").value,
       gender: $("in-gender").value || undefined,
       age: Number($("in-age").value) || 18,
       background: $("in-bg").value || undefined,
+      apiKey: apiKey || undefined,
+      model,
     });
     sessionId = data.sessionId;
+    if (data.aiError) alert(data.aiError);
     showScreen("game");
     renderAll(data.state);
     renderEvent(data.event, null);
+    const badge = $("g-ai-badge");
+    if (badge) {
+      badge.textContent = data.aiActive ? "AI 모드" : "폴백 모드";
+      badge.className = "ai-badge " + (data.aiActive ? "on" : "off");
+    }
   } catch (e) {
     alert("시작 실패: " + e.message);
   } finally {
@@ -166,6 +182,15 @@ $("custom-btn").onclick = customAction;
 $("custom-input").addEventListener("keydown", (e) => { if (e.key === "Enter") customAction(); });
 $("btn-restart").onclick = () => location.reload();
 
-// AI 상태 표시
-fetch("/api/state?sessionId=none").catch(() => {});
+// 저장된 키/모델 복원
+(function restore() {
+  const k = localStorage.getItem("lifesim_key");
+  const m = localStorage.getItem("lifesim_model");
+  if (k) {
+    $("in-key").value = k;
+    $("in-remember").checked = true;
+    $("ai-box").open = true;
+  }
+  if (m) $("in-model").value = m;
+})();
 $("ai-status").textContent = "선택과 자유 행동으로 인생을 만들어 가세요.";
