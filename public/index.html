@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LifeSim 2026 · 인생 시뮬레이터</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 시작 화면 -->
+    <section id="screen-start" class="screen active">
+      <div class="hero">
+        <h1>LifeSim <span class="year">2026</span></h1>
+        <p class="tagline">당신은 2026년 대한민국을 살아가는 한 사람.<br/>매 순간의 선택이 인생을 만든다.</p>
+      </div>
+      <div class="card setup">
+        <label>이름 <input id="in-name" placeholder="비워두면 랜덤" maxlength="12" /></label>
+        <label>성별
+          <select id="in-gender">
+            <option value="">랜덤</option>
+            <option value="남성">남성</option>
+            <option value="여성">여성</option>
+          </select>
+        </label>
+        <label>시작 나이 <input id="in-age" type="number" min="14" max="70" value="18" /></label>
+        <label>배경 한 줄 <input id="in-bg" placeholder="예: 지방 출신 대학 새내기 (선택)" maxlength="60" /></label>
+        <button id="btn-start" class="primary">인생 시작하기</button>
+        <p id="ai-status" class="ai-status"></p>
+      </div>
+    </section>
+
+    <!-- 게임 화면 -->
+    <section id="screen-game" class="screen">
+      <header class="topbar">
+        <div class="who">
+          <strong id="g-name">—</strong>
+          <span id="g-meta" class="meta">—</span>
+        </div>
+        <div class="money" id="g-money">—</div>
+      </header>
+
+      <div class="stats" id="g-stats"></div>
+
+      <main class="event-area">
+        <div class="card event" id="event-card">
+          <h2 id="ev-title">—</h2>
+          <p id="ev-narrative" class="narrative">—</p>
+          <div id="outcome-box" class="outcome hidden"></div>
+          <div id="choices" class="choices"></div>
+          <div class="custom">
+            <input id="custom-input" placeholder="또는 직접 행동을 입력… (예: 카페 창업을 준비한다)" maxlength="100" />
+            <button id="custom-btn">실행</button>
+          </div>
+        </div>
+        <div id="loading" class="loading hidden"><div class="spinner"></div><span>전개 중…</span></div>
+      </main>
+
+      <aside class="sidebar">
+        <div class="card">
+          <h3>인간관계</h3>
+          <ul id="g-rels" class="rels"></ul>
+        </div>
+        <div class="card">
+          <h3>인생 일지</h3>
+          <ul id="g-log" class="log"></ul>
+        </div>
+      </aside>
+    </section>
+
+    <!-- 사망 화면 -->
+    <section id="screen-end" class="screen">
+      <div class="card end">
+        <h1>🕯️ 인생의 끝</h1>
+        <p id="end-summary">—</p>
+        <ul id="end-log" class="log"></ul>
+        <button id="btn-restart" class="primary">새 인생 시작</button>
+      </div>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
