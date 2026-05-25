@@ -2,94 +2,106 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LifeSim 2026 · 인생 시뮬레이터</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>LifeSim AI</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="app">
-    <!-- 시작 화면 -->
-    <section id="screen-start" class="screen active">
+<div id="phone">
+
+  <!-- 시작/생성 -->
+  <section id="screen-start" class="screen active">
+    <div class="start-scroll">
       <div class="hero">
-        <h1>LifeSim <span class="year">2026</span></h1>
-        <p class="tagline">2026년 대한민국. 당신의 인생을 채팅으로 살아가세요.<br/>하고 싶은 무엇이든 입력하면 이야기가 펼쳐집니다.</p>
+        <h1 id="brand">LifeSim AI</h1>
+        <p class="tagline" id="brand-tag">한 사람의 인생을, 하루의 시간대마다 살아간다</p>
       </div>
-      <div class="card setup">
-        <label>이름 <input id="in-name" placeholder="비워두면 랜덤" maxlength="12" /></label>
-        <label>성별
-          <select id="in-gender">
-            <option value="">랜덤</option>
-            <option value="남성">남성</option>
-            <option value="여성">여성</option>
-          </select>
+
+      <div id="continue-box" class="card hidden">
+        <button id="btn-continue" class="primary">이어하기</button>
+        <button id="btn-newgame-clear" class="ghost">새로 시작 (기존 저장 삭제)</button>
+      </div>
+
+      <div class="card form">
+        <h2>캐릭터 생성</h2>
+        <div class="grid2">
+          <label>이름<input id="f-name" placeholder="랜덤" maxlength="12" /></label>
+          <label>나이<input id="f-age" type="number" min="14" max="70" value="22" /></label>
+          <label>성별
+            <select id="f-gender"><option>남성</option><option>여성</option></select>
+          </label>
+          <label>지역
+            <select id="f-region"><option>서울</option><option>경기</option><option>지방 도시</option><option>지방 소도시</option></select>
+          </label>
+        </div>
+        <label>시작 시나리오
+          <select id="f-scenario"></select>
         </label>
-        <label>시작 나이 <input id="in-age" type="number" min="14" max="70" value="20" /></label>
-        <label>배경 한 줄 <input id="in-bg" placeholder="예: 지방 출신 대학 휴학생 (선택)" maxlength="60" /></label>
+        <label>장기 목표
+          <select id="f-goal"></select>
+        </label>
+        <label>성격
+          <select id="f-personality"><option>평범함</option><option>성실함</option><option>게으름</option><option>외향적</option><option>내향적</option><option>충동적</option><option>신중함</option></select>
+        </label>
+        <label>가족 배경 / 한 줄 설정<input id="f-bg" placeholder="예: 지방에서 상경, 학자금 대출 있음 (선택)" maxlength="60" /></label>
+        <label>난이도
+          <div id="f-difficulty" class="seg"></div>
+        </label>
 
         <details class="ai-box" id="ai-box">
-          <summary>🤖 AI 모드 설정 (OpenAI API 키)</summary>
-          <label>API 키
-            <input id="in-key" type="password" placeholder="sk-... (입력 시 AI가 이야기를 생성)" autocomplete="off" />
-          </label>
+          <summary>🤖 AI 내레이션 설정 (OpenAI API 키 · 선택)</summary>
+          <label>API 키<input id="f-key" type="password" placeholder="sk-... (없으면 내장 내레이션)" autocomplete="off" /></label>
           <label>모델
-            <select id="in-model">
-              <option value="gpt-4o">gpt-4o (균형·추천)</option>
-              <option value="gpt-4o-mini">gpt-4o-mini (빠름·저렴)</option>
+            <select id="f-model">
+              <option value="gpt-4o">gpt-4o (추천)</option>
+              <option value="gpt-4o-mini">gpt-4o-mini (빠름)</option>
               <option value="gpt-4.1">gpt-4.1 (고품질)</option>
             </select>
           </label>
-          <label class="check"><input id="in-remember" type="checkbox" /> 이 브라우저에 키 기억하기</label>
-          <p class="hint">키는 로컬 서버 메모리에서만 사용됩니다. '기억하기'를 켜면 이 브라우저(localStorage)에만 저장됩니다. 비워두면 내장 폴백 엔진으로 플레이합니다.</p>
+          <label class="check"><input id="f-remember" type="checkbox" /> 이 브라우저에 키 기억</label>
+          <p class="hint">키는 로컬 서버 프록시를 통해서만 사용됩니다. 게임의 돈·시간·확률·수치는 AI가 아니라 시스템이 계산합니다. 키가 없어도 플레이 가능합니다.</p>
         </details>
 
-        <button id="btn-start" class="primary">인생 시작하기</button>
+        <button id="btn-create" class="primary">인생 시작</button>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- 게임 화면 -->
-    <section id="screen-game" class="screen">
-      <header class="topbar">
-        <div class="who">
-          <strong id="g-name">—</strong>
-          <span id="g-meta" class="meta">—</span>
-        </div>
-        <div class="topright">
-          <span id="g-ai-badge" class="ai-badge"></span>
-          <div class="net"><span class="net-label">순자산</span><span id="g-net" class="money">—</span></div>
-        </div>
-      </header>
-
-      <div class="stats" id="g-stats"></div>
-
-      <div class="main-grid">
-        <!-- 채팅 -->
-        <section class="chat-panel">
-          <div id="chat-log" class="chat-log"></div>
-          <div id="suggestions" class="suggestions"></div>
-          <div class="chat-input">
-            <input id="chat-text" placeholder="무엇을 할까요? (예: 카페 창업 자금을 알아본다)" maxlength="200" />
-            <button id="chat-send">▶</button>
-          </div>
-        </section>
-
-        <!-- 탭 패널 -->
-        <aside class="tabs-panel">
-          <nav class="tabs" id="tabs"></nav>
-          <div class="tab-body" id="tab-body"></div>
-        </aside>
+  <!-- 게임 -->
+  <section id="screen-game" class="screen">
+    <header class="g-header">
+      <div class="gh-row">
+        <div class="gh-date"><span id="gh-date">—</span><span id="gh-slot" class="gh-slot">—</span></div>
+        <div class="gh-loc">📍 <span id="gh-loc">집</span></div>
+        <span id="gh-ai" class="ai-badge"></span>
       </div>
-    </section>
+      <div class="gh-goal"><span id="gh-goal">목표</span><div class="goalbar"><i id="gh-goalbar"></i></div><span id="gh-goalpct">0%</span></div>
+    </header>
 
-    <!-- 사망 화면 -->
-    <section id="screen-end" class="screen">
+    <div class="status-strip" id="status-strip"></div>
+
+    <main class="content" id="content"></main>
+
+    <nav class="bottom-nav" id="bottom-nav"></nav>
+  </section>
+
+  <!-- 종료 -->
+  <section id="screen-end" class="screen">
+    <div class="start-scroll">
       <div class="card end">
-        <h1>🕯️ 인생의 끝</h1>
-        <p id="end-summary">—</p>
-        <ul id="end-log" class="log"></ul>
+        <h1>🕯️ 인생의 한 장이 닫혔다</h1>
+        <p id="end-summary"></p>
+        <h3>주요 기록</h3>
+        <ul id="end-log" class="loglist"></ul>
         <button id="btn-restart" class="primary">새 인생 시작</button>
       </div>
-    </section>
-  </div>
-  <script src="app.js"></script>
+    </div>
+  </section>
+
+  <!-- 모달 -->
+  <div id="modal-root"></div>
+  <div id="toast" class="toast hidden"></div>
+</div>
+<script type="module" src="app.js"></script>
 </body>
 </html>
